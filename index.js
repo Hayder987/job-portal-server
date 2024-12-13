@@ -20,9 +20,34 @@ const client = new MongoClient(uri, {
   }
 });
 
+    
 async function run() {
   try {
-   
+    const JobsCollection = client.db("Jobs-DB").collection("jobsCollection")
+
+    app.get('/alljobs', async(req, res)=>{
+        const result = await JobsCollection.find().toArray()
+        res.send(result)
+    })
+
+    app.get('/recentJobs', async(req, res)=>{
+      const option = {limit: 8}
+      const result = await JobsCollection.find({}, option).sort({_id: -1}).toArray()
+      res.send(result)
+    })
+
+    app.get('/search', async(req, res)=>{
+      const {params}= req.query;
+      let option = {}
+      if(params){
+        option = {category:{$regex:params, $options:'i'}}
+      }
+
+      const result = await JobsCollection.find(option).toArray()
+      res.send(result)
+    })
+
+
    
    
 
