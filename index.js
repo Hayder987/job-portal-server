@@ -26,9 +26,22 @@ async function run() {
     const JobsCollection = client.db("Jobs-DB").collection("jobsCollection")
     const applicationCollection = client.db("Jobs-DB").collection("applicationCollection")
 
+    app.post('/alljobs', async(req, res)=>{
+      const body = req.body
+      const result = await JobsCollection.insertOne(body)
+      res.send(result)
+    })
+
     app.get('/alljobs', async(req, res)=>{
         const result = await JobsCollection.find().toArray()
         res.send(result)
+    })
+
+    app.get('/mypost', async(req, res)=>{
+      const email = req.query.email
+      const query = {hr_email:email}
+      const result = await JobsCollection.find(query).toArray()
+      res.send(result)
     })
 
     app.get('/recentJobs', async(req, res)=>{
@@ -63,6 +76,22 @@ async function run() {
       const body = req.body;
       const result = await applicationCollection.insertOne(body)
       res.send(result)
+    })
+
+    app.get('/myApplication', async(req, res)=>{
+      const email = req.query.email;
+      const query = {email: email}
+      const result =await applicationCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    
+
+    app.delete('/myApplication/:id', async(req, res)=>{
+        const id = req.params.id
+        const filter  = {_id: new ObjectId(id)}
+        const result = await applicationCollection.deleteOne(filter)
+        res.send(result)
     })
 
 
