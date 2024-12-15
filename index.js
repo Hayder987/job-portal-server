@@ -125,7 +125,7 @@ async function run() {
       const filter = {_id: new ObjectId(id)}
       const updateDoc = {
         $set: {
-           status: body.value
+           status: body.status
         }
       }
 
