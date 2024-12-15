@@ -2,11 +2,40 @@ require('dotenv').config()
 const express = require('express')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors')
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 const app = express()
 const port = process.env.PORT || 4000
 
-app.use(cors())
+app.use(cors({
+  origin: ['http://localhost:5173', 
+  'https://job-portal-527fe.web.app/'],
+  credentials:true
+}))
+
+
 app.use(express.json())
+app.use(cookieParser());
+
+const verifyToken =(req, res, next)=>{
+  const token = req.cookies.token
+
+  if(!token){
+    return res.status(401).send({message: 'access Denied'})
+  }
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_KEY, (err, decoded)=>{
+    if(err){
+      return res.status(401).send({message: 'access Denied'})
+    }
+
+    req.user = decoded
+    next()
+
+  })
+
+}
+
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.jheyv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -25,6 +54,19 @@ async function run() {
   try {
     const JobsCollection = client.db("Jobs-DB").collection("jobsCollection")
     const applicationCollection = client.db("Jobs-DB").collection("applicationCollection")
+
+    app.post('/jwt', async(req, res)=>{
+      const user = req.body
+
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_KEY, {expiresIn:'5h'})
+
+      res.cookie('token', token,{
+        httpOnly: true,
+        secure:false
+      }).send({status: true})
+     
+    })
+
 
     app.post('/alljobs', async(req, res)=>{
       const body = req.body
@@ -75,7 +117,6 @@ async function run() {
     app.post('/application', async(req, res)=>{
       const body = req.body;
       const result = await applicationCollection.insertOne(body)
-
       const id = body.jobsId
       const filter = {_id: new ObjectId(id)}
       const job = await JobsCollection.findOne(filter)
@@ -98,9 +139,13 @@ async function run() {
 
     })
 
-    app.get('/myApplication', async(req, res)=>{
+    app.get('/myApplication', verifyToken, async(req, res)=>{
+     
       const email = req.query.email;
       const query = {email: email}
+      if(req.user.email !== email){
+        return res.status(403).send('forbidden')
+      }
       const result =await applicationCollection.find(query).toArray()
       res.send(result)
     })
